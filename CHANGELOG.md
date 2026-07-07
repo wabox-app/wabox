@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-07
+
 ### Added
 
 - Inbox envelopes now carry mention & quoted-reply metadata: `mentions` (the
@@ -209,7 +211,8 @@ Initial release.
   install via systemd, launchd, or Windows Task Scheduler.
 - MIT license and contribution guidelines, including an AI-assistance policy.
 
-[Unreleased]: https://github.com/wabox-app/wabox/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/wabox-app/wabox/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/wabox-app/wabox/compare/v0.1.11...v0.2.0
 [0.1.11]: https://github.com/wabox-app/wabox/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/wabox-app/wabox/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/wabox-app/wabox/compare/v0.1.8...v0.1.9

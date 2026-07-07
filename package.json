@@ -1,6 +1,6 @@
 {
   "name": "wabox",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "description": "A bridge between WhatsApp and the filesystem — incoming messages/files land in an inbox folder, an outbox folder is watched and sent back. Built on Baileys.",
   "type": "module",
   "main": "index.js",
