@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Inbox envelopes now carry mention & quoted-reply metadata: `mentions` (the
+  @-mentioned JIDs, verbatim), `mentionedMe` (`true` when one of your own
+  identities — phone or LID — is mentioned), and `quoted` (`{ id, participant,
+  fromMe, text }` for reply messages, else `null`). These let a group consumer
+  tell "addressed to me" from group noise via `mentionedMe || quoted.fromMe`,
+  computed in core because only core knows the session's own identities. The
+  fields are additive and always present. See
+  [INTEGRATION.md](INTEGRATION.md#groups-knowing-when-youre-addressed).
+- First unit test suite (`npm test`, `node --test`, no new dependencies),
+  covering the pure envelope-parsing helpers.
+
 ## [0.1.11] - 2026-06-05
 
 ### Changed

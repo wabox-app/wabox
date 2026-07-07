@@ -20,11 +20,16 @@ jobs:
 
       # No `npm ci`: these checks only use Node built-ins, and installing the
       # full dependency tree (Baileys + sharp native build) is slow and flaky.
+      # The test suite honours this too — it imports only src/envelope.js and
+      # src/selfId.js (pure, dependency-free), never the Baileys/chokidar stack.
       - name: Syntax check
         run: |
           for f in bin/cli.js config.js index.js src/*.js scripts/*.mjs; do
             node --check "$f"
           done
+
+      - name: Unit tests
+        run: npm test
 
       - name: Skill is in sync with INTEGRATION.md
         run: npm run check:skill

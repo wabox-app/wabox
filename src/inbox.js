@@ -5,6 +5,17 @@ import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { config } from '../config.js';
 import { logger, baileysLogger } from './logger.js';
 import { recordLid } from './lidMap.js';
+import { selfIds } from './selfId.js';
+import {
+  bare,
+  extFor,
+  extractMentions,
+  extractText,
+  findMedia,
+  getContextInfo,
+  quotedRecord,
+  unwrap,
+} from './envelope.js';
 
 // Maps an inbox `.json` path -> the WhatsApp message key needed to send a read
 // receipt. Populated when a message is saved (and when the watcher first sees a
@@ -18,69 +29,6 @@ function keyFromRecord(rec) {
   return key;
 }
 
-// Maps the media message keys Baileys exposes to a friendly type label.
-const MEDIA_KEYS = {
-  imageMessage: 'image',
-  videoMessage: 'video',
-  audioMessage: 'audio',
-  documentMessage: 'document',
-  stickerMessage: 'sticker',
-};
-
-// Minimal mimetype -> extension fallbacks for when no filename is provided.
-const MIME_EXT = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'video/mp4': 'mp4',
-  'audio/ogg': 'ogg',
-  'audio/mpeg': 'mp3',
-  'audio/mp4': 'm4a',
-  'application/pdf': 'pdf',
-};
-
-// Some messages are wrapped (disappearing / view-once). Peel them.
-function unwrap(message) {
-  if (!message) return message;
-  if (message.ephemeralMessage) return unwrap(message.ephemeralMessage.message);
-  if (message.viewOnceMessage) return unwrap(message.viewOnceMessage.message);
-  if (message.viewOnceMessageV2) return unwrap(message.viewOnceMessageV2.message);
-  if (message.documentWithCaptionMessage)
-    return unwrap(message.documentWithCaptionMessage.message);
-  return message;
-}
-
-function extractText(message) {
-  if (!message) return '';
-  return (
-    message.conversation ||
-    message.extendedTextMessage?.text ||
-    message.imageMessage?.caption ||
-    message.videoMessage?.caption ||
-    message.documentMessage?.caption ||
-    ''
-  );
-}
-
-function findMedia(message) {
-  for (const [key, type] of Object.entries(MEDIA_KEYS)) {
-    if (message?.[key]) return { type, key, node: message[key] };
-  }
-  return null;
-}
-
-function extFor(node, type) {
-  if (node.fileName) {
-    const e = path.extname(node.fileName).replace('.', '');
-    if (e) return e;
-  }
-  if (node.mimetype && MIME_EXT[node.mimetype.split(';')[0]]) {
-    return MIME_EXT[node.mimetype.split(';')[0]];
-  }
-  return type === 'audio' ? 'ogg' : 'bin';
-}
-
 // Make a filesystem-safe stem like 20260603-031200_5511999998888_3EB0ABC
 function stemFor(m) {
   const ts = Number(m.messageTimestamp) * 1000 || Date.now();
@@ -92,12 +40,6 @@ function stemFor(m) {
   const sender = (m.key.remoteJid || 'unknown').replace(/[^0-9a-zA-Z]/g, '');
   const id = (m.key.id || '').slice(-8);
   return `${stamp}_${sender}_${id}`;
-}
-
-// Local part of a JID, without the @server or :device suffix.
-// "5511983426258:2@s.whatsapp.net" -> "5511983426258"
-function bare(jid) {
-  return (jid || '').split('@')[0].split(':')[0];
 }
 
 // The sender's real phone number. When remoteJid is a LID (@lid), WhatsApp still
@@ -157,6 +99,13 @@ export async function saveIncoming(sock, m) {
   const text = extractText(message);
   const media = findMedia(message);
 
+  // Mention / quoted-reply metadata. Computed here because deciding "was *I*
+  // addressed" needs the session's own identities (phone JID + LID), which
+  // consumers don't have. Fields are always present so envelope shape is stable.
+  const ctx = getContextInfo(message);
+  const self = selfIds(sock);
+  const mentions = extractMentions(ctx);
+
   const stem = stemFor(m);
   const record = {
     id: m.key.id,
@@ -171,6 +120,12 @@ export async function saveIncoming(sock, m) {
     fromMe: !!m.key.fromMe,
     timestamp: new Date((Number(m.messageTimestamp) || 0) * 1000).toISOString(),
     text,
+    // @-mentioned JIDs, verbatim (may be @s.whatsapp.net or @lid); [] when none.
+    mentions,
+    // True when any of our own identities (phone or LID) is in `mentions`.
+    mentionedMe: mentions.some((j) => self.has(bare(j))),
+    // A quote-reply's target, or null. `quoted.fromMe` = a reply to our message.
+    quoted: quotedRecord(ctx, self),
     media: null,
   };
 

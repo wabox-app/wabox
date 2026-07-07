@@ -51,6 +51,9 @@ working folder if you want to keep them around while you process.)
   "fromMe": false,
   "timestamp": "2026-06-03T09:25:34.000Z",
   "text": "check this photo",
+  "mentions": [],
+  "mentionedMe": false,
+  "quoted": null,
   "media": {
     "type": "image",
     "file": "20260603-062534_277880256909343lid_A1B2C3D4.jpg",
@@ -70,12 +73,40 @@ working folder if you want to keep them around while you process.)
 | `fromMe`      | Usually `false` (your own messages are skipped by default).             |
 | `timestamp`   | ISO 8601.                                                               |
 | `text`        | Message text / media caption (may be empty).                           |
+| `mentions`    | JIDs this message @-mentions, verbatim (`@s.whatsapp.net` or `@lid`); `[]` when none. |
+| `mentionedMe` | `true` when one of *your* identities (phone or LID) is in `mentions`.    |
+| `quoted`      | `null`, or the quoted message when this is a reply (below).             |
 | `media`       | `null`, or an object describing an attachment (below).                  |
+
+**Quoted:** when the message is a reply, `quoted` is `{ "id", "participant",
+"fromMe", "text" }` — the quoted message's id, its author's JID, whether it was
+one of *your* messages (`fromMe`), and a 200-char preview of its body. `null`
+otherwise.
 
 **Media:** when present, the file sits next to the JSON; open `inbox/<media.file>`
 to read its bytes. `media.type` is one of `image`, `video`, `audio`, `document`,
 `sticker`. If a download failed you'll see `{"type": ..., "error": "..."}`
 instead of `file`.
+
+### Groups: knowing when you're addressed
+
+In a busy group you usually want to react only when someone is actually talking
+to you. Two signals mean "addressed to me", and the envelope hands you both
+pre-computed — no JID bookkeeping on your side:
+
+```sh
+# reply only when @-mentioned or when someone replies to one of your messages
+jq -e '.mentionedMe or (.quoted.fromMe // false)' inbox/msg.json
+```
+
+`mentionedMe` and `quoted.fromMe` are decided by wabox against the session's own
+identities (phone number **and** LID), so they hold even when the group routes
+you as a `@lid`. `mentions` carries the raw JID list if you need more than the
+boolean.
+
+> **Older wabox:** these three fields are additive. A core that predates them
+> simply omits them, so guard with `// false` / `// empty` (as above) and treat
+> their absence as "can't tell — behave as you did before".
 
 ## Writing: outbox job format
 

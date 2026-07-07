@@ -39,6 +39,7 @@
   ],
   "scripts": {
     "start": "node bin/cli.js run",
+    "test": "node --test",
     "config": "node bin/cli.js config",
     "dev": "node --watch bin/cli.js run",
     "build:skill": "node scripts/build-skill.mjs",
